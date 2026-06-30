@@ -1,0 +1,5 @@
+.vercel
+node_modules/
+.omo/
+.codegraph
+.DS_Store
