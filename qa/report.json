@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "veilVisibleBeforeClick": {
+    "exists": true,
+    "hasHiddenClass": false,
+    "computedOpacity": "1"
+  },
+  "veilVisibleAfterClick": {
+    "veilHasHiddenClass": true,
+    "controlsVisible": true,
+    "controlsKeyCount": 9
+  },
+  "midPixel": {
+    "w": 1280,
+    "h": 800
+  },
+  "stats1": {
+    "seed": 1566838304,
+    "count": 863,
+    "crowns": 262,
+    "drones": 60,
+    "embers": 500,
+    "firstBuilding": {
+      "x": -408.1687221962503,
+      "z": -421.1111847953647,
+      "w": 10.38152425037697,
+      "d": 20.262864373624325,
+      "h": 56.28185492016577,
+      "seed": 0.6862572557292879,
+      "x0": -408.1687221962503,
+      "z0": -421.1111847953647
+    },
+    "cameraY": 46.864990160346636,
+    "cameraZ": 198.44680735238342,
+    "composerPasses": 4,
+    "passTypes": [
+      "RenderPass",
+      "UnrealBloomPass",
+      "ShaderPass(chroma)",
+      "RenderPass"
+    ]
+  },
+  "stats2": {
+    "seed": 2485290375,
+    "count": 837,
+    "firstBuilding": {
+      "x": -405.11544712561425,
+      "z": -385.7960426172082,
+      "w": 18.373519157990813,
+      "d": 20.242654611822218,
+      "h": 62.52734939407822,
+      "seed": 0.6424315988551825,
+      "x0": -405.11544712561425,
+      "z0": -385.7960426172082
+    }
+  },
+  "dronesMoved": 60,
+  "dronesMovedRatio": "1.00",
+  "hasChromaticAberration": true,
+  "differentCity": true,
+  "errors": [],
+  "rawErrors": [
+    "THREE.PointerLockControls: Unable to use Pointer Lock API",
+    "PAGE_ERROR: The root document of this element is not valid for pointer lock."
+  ],
+  "warnings": [
+    "[.WebGL-0x10c00504e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x10c00504e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x10c00504e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x10c00504e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "logs": [
+    "[city] seed=0x5D640E20 buildings=863 crowns=262 drones=60 embers=500",
+    "[city] seed=0x94228587 buildings=837 crowns=270 drones=60 embers=500"
+  ]
+}
