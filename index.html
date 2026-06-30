@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cyberpunk City // Night Flight</title>
+<style>
+  :root {
+    --ink: #0a0820;
+    --neon-cyan: #88ddff;
+    --neon-magenta: #ff79c6;
+    --dim: #6a7a99;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    background: var(--ink);
+    color: var(--neon-cyan);
+    font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    -webkit-font-smoothing: antialiased;
+    cursor: crosshair;
+  }
+  canvas { display: block; }
+  #hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    user-select: none;
+  }
+  #hud .corner {
+    position: absolute;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px rgba(136, 221, 255, 0.55);
+    padding: 14px 18px;
+    opacity: 0.92;
+  }
+  #hud .corner::before {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    border-top: 1px solid var(--neon-cyan);
+    border-left: 1px solid var(--neon-cyan);
+    opacity: 0.7;
+  }
+  #hud .tl::before { top: 6px; left: 6px; }
+  #hud .tr::before { top: 6px; right: 6px; transform: scaleX(-1); }
+  #hud .bl::before { bottom: 6px; left: 6px; transform: scaleY(-1); }
+  #hud .br::before { bottom: 6px; right: 6px; transform: scale(-1, -1); }
+  #hud .tl { top: 0; left: 0; }
+  #hud .tr { top: 0; right: 0; text-align: right; }
+  #hud .bl { bottom: 0; left: 0; }
+  #hud .br { bottom: 0; right: 0; text-align: right; }
+  #hud b { color: #ffffff; }
+  #hud .dim { color: var(--dim); text-shadow: none; }
+  #hud .row { display: block; line-height: 1.7; }
+  #hud .row .k { color: var(--dim); margin-right: 4px; }
+  #hud .row .v { color: #fff; }
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    background:
+      radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 80%, rgba(0,0,0,0.95) 100%);
+  }
+  #scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 6;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.0) 0px,
+        rgba(255,255,255,0.0) 2px,
+        rgba(255,255,255,0.012) 3px,
+        rgba(255,255,255,0.0) 4px
+      );
+    mix-blend-mode: screen;
+    opacity: 0.5;
+  }
+  #start-veil {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(10,8,32,0.15) 0%, rgba(10,8,32,0.7) 60%, rgba(10,8,32,0.92) 100%);
+    color: var(--neon-cyan);
+    cursor: pointer;
+    transition: opacity 0.6s ease;
+    text-align: center;
+    letter-spacing: 0.2em;
+  }
+  #start-veil.hidden { opacity: 0; pointer-events: none; }
+  #start-veil .pulse {
+    border: 1px solid rgba(136,221,255,0.45);
+    padding: 22px 36px;
+    font-size: 14px;
+    text-transform: uppercase;
+    box-shadow: 0 0 24px rgba(136,221,255,0.25), inset 0 0 24px rgba(136,221,255,0.08);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 24px rgba(136,221,255,0.25), inset 0 0 24px rgba(136,221,255,0.08); }
+    50%      { box-shadow: 0 0 40px rgba(136,221,255,0.55), inset 0 0 36px rgba(136,221,255,0.16); }
+  }
+  #start-veil b { color: #fff; }
+
+  /* ===== VISUAL CONTROLS PANEL (always on screen after popup closes) ===== */
+  #controls {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    background: linear-gradient(180deg,
+      rgba(10, 8, 32, 0.78) 0%,
+      rgba(10, 8, 32, 0.55) 100%);
+    border: 1px solid rgba(136, 221, 255, 0.28);
+    padding: 14px 22px 16px;
+    color: var(--neon-cyan);
+    font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 22px;
+    row-gap: 8px;
+    align-items: center;
+    pointer-events: none;
+    user-select: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    min-width: 380px;
+    box-shadow:
+      0 0 32px rgba(136, 221, 255, 0.10),
+      inset 0 0 22px rgba(136, 221, 255, 0.04);
+    animation: ctrl-appear 0.55s ease-out 0.15s both;
+  }
+  #controls::before, #controls::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 8px rgba(136, 221, 255, 0.5);
+    pointer-events: none;
+  }
+  #controls::before { top: -1px;    left: -1px;    border-right: 0;  border-bottom: 0; }
+  #controls::after  { bottom: -1px; right: -1px;   border-left: 0;   border-top: 0;    }
+  #controls.hidden { display: none; }
+  #controls .ctrl-title {
+    grid-column: 1 / -1;
+    color: var(--neon-magenta);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 0 6px rgba(255, 121, 198, 0.55);
+  }
+  #controls .ctrl-title::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--neon-magenta);
+    box-shadow: 0 0 8px var(--neon-magenta);
+    border-radius: 50%;
+    animation: ctrl-blink 1.4s ease-in-out infinite;
+  }
+  #controls .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    grid-column: 1;
+  }
+  #controls .ctrl-label {
+    color: var(--dim);
+    text-shadow: none;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    grid-column: 2;
+  }
+  .key {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg,
+      rgba(136, 221, 255, 0.22) 0%,
+      rgba(136, 221, 255, 0.06) 100%);
+    border: 1px solid rgba(136, 221, 255, 0.50);
+    border-radius: 3px;
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 4px rgba(136, 221, 255, 0.6);
+    box-shadow:
+      0 0 8px rgba(136, 221, 255, 0.22),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  .key.key-wide   { min-width: 56px; }
+  .key.key-xwide  { min-width: 72px; }
+  .key.key-tiny   { min-width: 18px; height: 18px; font-size: 8px; padding: 0 4px; }
+  .key-group      { display: flex; gap: 3px; }
+  @keyframes ctrl-appear {
+    from { opacity: 0; transform: translate(-50%, 18px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  @keyframes ctrl-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.165.0",
+    "three/addons/": "https://esm.sh/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="hud">
+    <div class="corner tl">
+      <div class="row"><span class="dim">// </span><b>NEON GRID 7.7</b></div>
+      <div class="row"><span class="k">SECTOR</span><span class="v" id="sector-tag">---</span></div>
+      <div class="row"><span class="k">UNITS</span><span class="v" id="bcount">---</span></div>
+    </div>
+    <div class="corner tr">
+      <div class="row"><span class="k">FPS</span><span class="v" id="fps">--</span></div>
+      <div class="row"><span class="k">ALT</span><span class="v" id="alt">--</span> <span class="dim">m</span></div>
+      <div class="row"><span class="k">SPD</span><span class="v" id="spd">--</span> <span class="dim">u/s</span></div>
+    </div>
+    <div class="corner bl"></div>
+    <div class="corner br">
+      <div class="row"><span class="k">SEED</span><span class="v" id="seed-tag">--------</span></div>
+      <div class="row"><span class="k">RUN</span><span class="v" id="runtime">0s</span></div>
+    </div>
+  </div>
+  <div id="controls">
+    <div class="ctrl-title">FLIGHT CONTROLS</div>
+
+    <div class="ctrl-row"><div class="key key-wide">MOUSE</div></div>
+    <div class="ctrl-label">look around</div>
+
+    <div class="ctrl-row"><div class="key key-wide">CLICK</div></div>
+    <div class="ctrl-label">engage pointer-lock</div>
+
+    <div class="ctrl-row"><div class="key-group"><div class="key">W</div></div></div>
+    <div class="ctrl-label">forward</div>
+
+    <div class="ctrl-row"><div class="key-group"><div class="key">A</div><div class="key">S</div><div class="key">D</div></div></div>
+    <div class="ctrl-label">strafe left / back / right</div>
+
+    <div class="ctrl-row"><div class="key key-wide">SPACE</div></div>
+    <div class="ctrl-label">ascend</div>
+
+    <div class="ctrl-row"><div class="key key-wide">SHIFT</div></div>
+    <div class="ctrl-label">descend</div>
+
+    <div class="ctrl-row"><div class="key key-wide">ESC</div></div>
+    <div class="ctrl-label">release mouse</div>
+  </div>
+  <div id="vignette"></div>
+  <div id="scanlines"></div>
+  <div id="start-veil"><div class="pulse"><b>CLICK</b> to engage flight</div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer }     from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }         from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass}     from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass }         from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass }         from 'three/addons/postprocessing/OutputPass.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+// inline chromatic-aberration shader (same idea as three.js's RGBShift / ChromaticAberrationShader;
+// we ship it inline because the addon file doesn't exist in r165)
+const ChromaticAberrationShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    amount:   { value: 0.003 },
+    angle:    { value: 0.0 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float     amount;
+    uniform float     angle;
+    varying vec2      vUv;
+    void main() {
+      vec2 dir = vec2(cos(angle), sin(angle));
+      vec2 ofs = dir * amount * (vUv - 0.5);
+      float r = texture2D(tDiffuse, vUv + ofs).r;
+      float g = texture2D(tDiffuse, vUv).g;
+      float b = texture2D(tDiffuse, vUv - ofs).b;
+      gl_FragColor = vec4(r, g, b, 1.0);
+    }
+  `,
+};
+
+// =====================================================================
+// 1.  Deterministic-but-random per-run RNG (Mulberry32)
+// =====================================================================
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const SEED = (Math.random() * 0xFFFFFFFF) >>> 0;
+const rng  = mulberry32(SEED);
+document.getElementById('seed-tag').textContent = SEED.toString(16).padStart(8, '0').toUpperCase();
+
+// =====================================================================
+// 2.  Cyberpunk palette
+// =====================================================================
+const PAL = {
+  fog:        new THREE.Color(0x0a0820),
+  sky:        new THREE.Color(0x05030f),
+  neonWarm: [
+    new THREE.Color(0xff3b6b),   // hot pink
+    new THREE.Color(0xff8a00),   // sodium orange
+    new THREE.Color(0xffd24a),   // amber
+  ],
+  neonCool: [
+    new THREE.Color(0x22e1ff),   // cyan
+    new THREE.Color(0xb76dff),   // violet
+    new THREE.Color(0x65ff9b),   // mint
+  ],
+};
+
+// =====================================================================
+// 3.  Procedural city descriptor (built before any Three.js object exists)
+// =====================================================================
+const BLOCK       = 80;                  // size of a city block (units)
+const RADIUS      = 5;                   // blocks in each direction (11x11 = 121)
+const CITY_SPAN   = (2 * RADIUS + 1) * BLOCK; // 880 units
+const ROAD_WIDTH  = 14;                  // road plane width
+const ROAD_LEN    = 2400;                // road plane length (long; fog hides the end)
+const DENS_MIN    = 4;
+const DENS_MAX    = 10;
+
+const BUILDINGS = [];
+for (let bx = -RADIUS; bx <= RADIUS; bx++) {
+  for (let bz = -RADIUS; bz <= RADIUS; bz++) {
+    const count = DENS_MIN + Math.floor(rng() * (DENS_MAX - DENS_MIN + 1));
+    for (let i = 0; i < count; i++) {
+      const w = 8 + rng() * 14;                       // 8-22
+      const d = 8 + rng() * 14;                       // 8-22
+      // skewed height: most ~10-25, occasional skyscraper
+      const h = 6 + Math.pow(rng(), 1.6) * 110;
+      const cx = bx * BLOCK;
+      const cz = bz * BLOCK;
+      // stay inside the inner part of the block (not on the road)
+      const innerHalfX = (BLOCK - w) * 0.46;
+      const innerHalfZ = (BLOCK - d) * 0.46;
+      const x = cx + (rng() * 2 - 1) * innerHalfX;
+      const z = cz + (rng() * 2 - 1) * innerHalfZ;
+      const seed = rng();
+      BUILDINGS.push({ x, z, w, d, h, seed, x0: x, z0: z });
+    }
+  }
+}
+
+// =====================================================================
+// 3b.  CROWNS — antennae / water tanks on top of ~32% of buildings
+// =====================================================================
+const CROWNS = [];
+for (const b of BUILDINGS) {
+  if (rng() < 0.32) {
+    const isAntenna = rng() < 0.6;
+    let cw, ch, cd, colorIdx;
+    if (isAntenna) {
+      cw = 0.5 + rng() * 0.7;
+      ch = 6 + rng() * 22;
+      cd = 0.5 + rng() * 0.7;
+      colorIdx = Math.floor(rng() * 6);
+    } else {
+      cw = 3 + rng() * 4;
+      ch = 2 + rng() * 3;
+      cd = 3 + rng() * 4;
+      colorIdx = Math.floor(rng() * 6);
+    }
+    CROWNS.push({
+      x: b.x, y: b.h + ch / 2, z: b.z,
+      w: cw, h: ch, d: cd,
+      colorIdx,
+      pulseSpeed: 0.4 + rng() * 1.8,
+      pulsePhase: rng() * Math.PI * 2,
+    });
+  }
+}
+
+// =====================================================================
+// 3c.  FLYING DRONES — emissive objects hovering / drifting through the air
+// =====================================================================
+const DRONES = [];
+for (let i = 0; i < 60; i++) {
+  DRONES.push({
+    x: (rng() - 0.5) * 700,
+    y: 20 + rng() * 100,
+    z: (rng() - 0.5) * 700,
+    vx: (rng() - 0.5) * 6,
+    vy: (rng() - 0.5) * 1.5,
+    vz: -6 - rng() * 16,
+    colorIdx: rng() > 0.5 ? 0 : 4,  // cyan or magenta
+    blink: rng() < 0.4,
+    blinkPhase: rng() * Math.PI * 2,
+    bobAmp: 0.5 + rng() * 1.5,
+  });
+}
+
+// =====================================================================
+// 3d.  ATMOSPHERIC EMBERS — drifting light particles for depth
+// =====================================================================
+const EMBER_COUNT = 500;
+const emberPositions = new Float32Array(EMBER_COUNT * 3);
+const emberColors    = new Float32Array(EMBER_COUNT * 3);
+const emberSizes     = new Float32Array(EMBER_COUNT);
+const emberDrift     = new Float32Array(EMBER_COUNT);  // per-particle forward speed
+for (let i = 0; i < EMBER_COUNT; i++) {
+  emberPositions[i * 3 + 0] = (rng() - 0.5) * 1100;
+  emberPositions[i * 3 + 1] = rng() * 120;
+  emberPositions[i * 3 + 2] = (rng() - 0.5) * 1100;
+  // color: cyan, magenta, mint, or amber
+  const pal = rng();
+  if      (pal < 0.30) { emberColors[i*3+0]=0.13; emberColors[i*3+1]=0.88; emberColors[i*3+2]=1.00; }
+  else if (pal < 0.55) { emberColors[i*3+0]=1.00; emberColors[i*3+1]=0.23; emberColors[i*3+2]=0.42; }
+  else if (pal < 0.80) { emberColors[i*3+0]=0.40; emberColors[i*3+1]=1.00; emberColors[i*3+2]=0.61; }
+  else                 { emberColors[i*3+0]=1.00; emberColors[i*3+1]=0.82; emberColors[i*3+2]=0.29; }
+  emberSizes[i]  = 1.0 + rng() * 2.4;
+  emberDrift[i]  = 4 + rng() * 12;     // forward drift speed (u/s)
+}
+
+console.log(`[city] seed=0x${SEED.toString(16).toUpperCase()} buildings=${BUILDINGS.length} crowns=${CROWNS.length} drones=${DRONES.length} embers=${EMBER_COUNT}`);
+
+// =====================================================================
+// 4.  Three.js core
+// =====================================================================
+const scene = new THREE.Scene();
+scene.background = PAL.sky.clone();
+scene.fog        = new THREE.FogExp2(PAL.fog.getHex(), 0.0085);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.5, 1500);
+camera.position.set(0, 42, 280);
+camera.lookAt(0, 10, 0);  // tilt down a bit so a main avenue is in view
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping        = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace   = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+// =====================================================================
+// 5.  Building InstancedMesh + per-instance window shader
+// =====================================================================
+const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
+
+// build per-instance seed buffer
+const seedArr = new Float32Array(BUILDINGS.length);
+for (let i = 0; i < BUILDINGS.length; i++) seedArr[i] = BUILDINGS[i].seed;
+buildingGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedArr, 1));
+
+const buildingMat = new THREE.ShaderMaterial({
+  uniforms: THREE.UniformsUtils.merge([
+    THREE.UniformsLib.fog,
+    {
+      uTime:    { value: 0 },
+      uNeonW0:  { value: PAL.neonWarm[0] },
+      uNeonW1:  { value: PAL.neonWarm[1] },
+      uNeonW2:  { value: PAL.neonWarm[2] },
+      uNeonC0:  { value: PAL.neonCool[0] },
+      uNeonC1:  { value: PAL.neonCool[1] },
+      uNeonC2:  { value: PAL.neonCool[2] },
+    },
+  ]),
+  fog: true,
+  vertexShader: /* glsl */`
+    attribute float aSeed;
+    varying vec3  vLocalPos;
+    varying vec3  vLocalNormal;
+    varying float vSeed;
+    varying float vTopness;
+
+    #include <fog_pars_vertex>
+
+    void main() {
+      vLocalPos    = position;
+      vLocalNormal = normal;
+      vSeed        = aSeed;
+      vTopness     = clamp(position.y + 0.5, 0.0, 1.0);  // 0 at bottom, 1 at top of unit box
+
+      vec4 worldPos   = modelMatrix * instanceMatrix * vec4(position, 1.0);
+      vec4 mvPosition = viewMatrix * worldPos;
+      gl_Position     = projectionMatrix * mvPosition;
+
+      #include <fog_vertex>
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec3  uNeonW0, uNeonW1, uNeonW2;
+    uniform vec3  uNeonC0, uNeonC1, uNeonC2;
+
+    varying vec3  vLocalPos;
+    varying vec3  vLocalNormal;
+    varying float vSeed;
+    varying float vTopness;
+
+    #include <fog_pars_fragment>
+
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    vec3 pickNeon(float s) {
+      if (s < 0.166) return uNeonW0;
+      if (s < 0.333) return uNeonW1;
+      if (s < 0.500) return uNeonW2;
+      if (s < 0.666) return uNeonC0;
+      if (s < 0.833) return uNeonC1;
+      return uNeonC2;
+    }
+
+    void main() {
+      vec3 absN = abs(vLocalNormal);
+
+      // base concrete
+      vec3 base = vec3(0.012, 0.014, 0.022);
+      // small concrete variation
+      base += 0.006 * hash21(floor(vLocalPos.xy * 14.0 + vLocalPos.zz * 17.0 + vSeed * 99.0));
+
+      vec3 emit = vec3(0.0);
+
+      if (absN.y < 0.5) {
+        // ===== SIDE FACE: window grid =====
+        vec2 surfaceUv;
+        if (absN.x > 0.5) surfaceUv = vec2(vLocalPos.z, vLocalPos.y);
+        else              surfaceUv = vec2(vLocalPos.x, vLocalPos.y);
+
+        // cells per local-box unit. Local box is 1x1, surfaceUv is in (-0.5, 0.5)
+        // (range 1.0). To get N windows across a building of width W, we want
+        // cells_per_local_unit = N (because the local box is normalized to 1 unit).
+        vec2 cells = vec2(7.0, 9.0);
+        vec2 cs    = surfaceUv * cells;
+        vec2 cell  = floor(cs);
+        vec2 cl    = fract(cs);
+
+        // inner window mask (slight border, taller window)
+        float border = step(0.18, cl.x) * step(cl.x, 0.82)
+                     * step(0.12, cl.y) * step(cl.y, 0.88);
+
+        // per-cell hash for lit / unlit
+        float cellHash = hash21(cell + vec2(vSeed * 73.0, vSeed * 137.0));
+        float lit      = step(0.42, cellHash);
+
+        // per-cell color hash -> one of 6 neon colors
+        float colorHash = hash21(cell + vec2(vSeed * 31.0, vSeed * 11.0) + 5.7);
+        vec3  neon      = pickNeon(colorHash);
+
+        // occasional neon sign panel covering several windows (rare)
+        float panelHash = hash21(floor(cell * vec2(0.25, 0.5)) + vec2(vSeed * 211.0, 0.0));
+        float panel = step(0.93, panelHash);
+        if (panel > 0.5) {
+          // big emissive block on this strip
+          emit += neon * 1.4;
+        }
+
+        // ===== ANIMATED NEON BILLBOARD =====
+        // Cell-based: ~1% of coarse blocks on each face are animated scrolling
+        // text/bars panels. Small, controlled, dim — reads as a single sign.
+        vec2 bbBlockCell  = floor(cell * vec2(0.33, 0.4));
+        float bbBlockHash = hash21(bbBlockCell + vec2(vSeed * 19.7, 0.0));
+        if (bbBlockHash > 0.99) {
+          float scroll = fract(uTime * 0.35 + bbBlockHash * 5.0);
+          float rowY   = fract(cl.y * 4.0 - scroll);
+          float bar    = step(0.45, fract(rowY * 3.0));
+          float kanji  = step(0.55, hash21(floor(cell * vec2(0.5, 0.25)) + vec2(scroll * 7.0, bbBlockHash)));
+          float pulse  = 0.55 + 0.25 * sin(uTime * 3.0 + bbBlockHash * 9.0);
+          vec3 bbCol   = mix(neon, uNeonC1, fract(bbBlockHash * 3.7));
+          // mask the border so the panel sits inside the cell cleanly
+          float bbBorder = step(0.15, cl.x) * step(cl.x, 0.85)
+                         * step(0.10, cl.y) * step(cl.y, 0.90);
+          emit += bbCol * (bar * 0.18 + kanji * 0.35) * pulse * bbBorder;
+        }
+
+        // occasional window flicker (rare cells)
+        float flicker = 1.0;
+        if (cellHash > 0.93) {
+          float t = uTime * 4.0 + cellHash * 100.0;
+          flicker = 0.35 + 0.65 * step(0.5, fract(sin(t) * 43758.5453));
+        }
+
+        emit += neon * lit * border * flicker * 1.6;
+      } else {
+        // ===== TOP / BOTTOM: dark, with rare rooftop light strip =====
+        float roofHash = hash21(floor(vLocalPos.xz * 8.0) + vec2(vSeed * 311.0, 0.0));
+        if (roofHash > 0.92) {
+          float colorHash = hash21(floor(vLocalPos.xz * 8.0) + vec2(vSeed * 11.0, 7.3));
+          emit += pickNeon(colorHash) * 0.9;
+        }
+      }
+
+      vec3 col = base + emit;
+      gl_FragColor = vec4(col, 1.0);
+      #include <fog_fragment>
+    }
+  `,
+});
+
+const buildingMesh = new THREE.InstancedMesh(buildingGeo, buildingMat, BUILDINGS.length);
+buildingMesh.frustumCulled = false; // we recycle them at large distances, don't cull
+scene.add(buildingMesh);
+
+const dummy = new THREE.Object3D();
+for (let i = 0; i < BUILDINGS.length; i++) {
+  const b = BUILDINGS[i];
+  dummy.position.set(b.x, b.h / 2, b.z);
+  dummy.scale.set(b.w, b.h, b.d);
+  dummy.updateMatrix();
+  buildingMesh.setMatrixAt(i, dummy.matrix);
+}
+buildingMesh.instanceMatrix.needsUpdate = true;
+
+// =====================================================================
+// 5b.  CROWN InstancedMesh — antennae / tanks on building tops
+//      Custom shader: vertical brightness gradient + slow pulse
+// =====================================================================
+const crownGeo = new THREE.BoxGeometry(1, 1, 1);
+const crownColorIdx = new Float32Array(CROWNS.length);
+for (let i = 0; i < CROWNS.length; i++) crownColorIdx[i] = CROWNS[i].colorIdx;
+crownGeo.setAttribute('aColorIdx', new THREE.InstancedBufferAttribute(crownColorIdx, 1));
+
+const crownMat = new THREE.ShaderMaterial({
+  uniforms: THREE.UniformsUtils.merge([
+    THREE.UniformsLib.fog,
+    {
+      uTime:    { value: 0 },
+      uNeonW0:  { value: PAL.neonWarm[0] },
+      uNeonW1:  { value: PAL.neonWarm[1] },
+      uNeonW2:  { value: PAL.neonWarm[2] },
+      uNeonC0:  { value: PAL.neonCool[0] },
+      uNeonC1:  { value: PAL.neonCool[1] },
+      uNeonC2:  { value: PAL.neonCool[2] },
+    },
+  ]),
+  fog: true,
+  vertexShader: /* glsl */`
+    attribute float aColorIdx;
+    varying float vColorIdx;
+    varying float vY;
+    #include <fog_pars_vertex>
+    void main() {
+      vColorIdx = aColorIdx;
+      vY = position.y + 0.5;     // 0 at bottom, 1 at top of unit box
+      vec4 worldPos   = modelMatrix * instanceMatrix * vec4(position, 1.0);
+      vec4 mvPosition = viewMatrix * worldPos;
+      gl_Position     = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uTime;
+    uniform vec3  uNeonW0, uNeonW1, uNeonW2;
+    uniform vec3  uNeonC0, uNeonC1, uNeonC2;
+    varying float vColorIdx;
+    varying float vY;
+    #include <fog_pars_fragment>
+
+    vec3 pickNeon(float s) {
+      if (s < 0.166) return uNeonW0;
+      if (s < 0.333) return uNeonW1;
+      if (s < 0.500) return uNeonW2;
+      if (s < 0.666) return uNeonC0;
+      if (s < 0.833) return uNeonC1;
+      return uNeonC2;
+    }
+
+    void main() {
+      vec3 base = pickNeon(vColorIdx);
+      // brighter at the top of the unit box (antenna tip glows)
+      float verticalGlow = mix(0.4, 2.4, vY);
+      // per-instance phase via colorIdx hash
+      float phase = vColorIdx * 7.31;
+      float pulse = 0.75 + 0.35 * sin(uTime * 1.3 + phase);
+      vec3 col = base * verticalGlow * pulse * 1.2;
+      gl_FragColor = vec4(col, 1.0);
+      #include <fog_fragment>
+    }
+  `,
+});
+
+const crownMesh = new THREE.InstancedMesh(crownGeo, crownMat, CROWNS.length);
+crownMesh.frustumCulled = false;
+for (let i = 0; i < CROWNS.length; i++) {
+  const c = CROWNS[i];
+  dummy.position.set(c.x, c.y, c.z);
+  dummy.scale.set(c.w, c.h, c.d);
+  dummy.updateMatrix();
+  crownMesh.setMatrixAt(i, dummy.matrix);
+}
+crownMesh.instanceMatrix.needsUpdate = true;
+scene.add(crownMesh);
+
+// =====================================================================
+// 5c.  DRONES — small bright octahedrons floating through the air
+//      Built-in MeshBasicMaterial with per-instance color via setColorAt
+// =====================================================================
+const droneGeo = new THREE.OctahedronGeometry(0.6, 0);
+const droneMat = new THREE.MeshBasicMaterial({
+  fog: true,
+  toneMapped: false,   // let bloom pick up the bright color
+  transparent: false,
+});
+const droneMesh = new THREE.InstancedMesh(droneGeo, droneMat, DRONES.length);
+droneMesh.frustumCulled = false;
+const _droneC1 = new THREE.Color(0x22e1ff);
+const _droneC2 = new THREE.Color(0xff3b6b);
+const _droneC3 = new THREE.Color(0x65ff9b);
+for (let i = 0; i < DRONES.length; i++) {
+  const d = DRONES[i];
+  dummy.position.set(d.x, d.y, d.z);
+  dummy.scale.set(1, 1, 1);
+  dummy.updateMatrix();
+  droneMesh.setMatrixAt(i, dummy.matrix);
+  droneMesh.setColorAt(i, d.colorIdx === 0 ? _droneC1 : (d.colorIdx === 1 ? _droneC2 : _droneC3));
+}
+droneMesh.instanceMatrix.needsUpdate = true;
+if (droneMesh.instanceColor) droneMesh.instanceColor.needsUpdate = true;
+scene.add(droneMesh);
+
+// =====================================================================
+// 5d.  EMBERS — atmospheric drifting light particles
+//      THREE.Points with custom shader (soft circular glow, additive)
+// =====================================================================
+const emberGeo = new THREE.BufferGeometry();
+emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPositions, 3));
+emberGeo.setAttribute('color',    new THREE.BufferAttribute(emberColors, 3));
+emberGeo.setAttribute('aSize',    new THREE.BufferAttribute(emberSizes, 1));
+
+const emberMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime:       { value: 0 },
+    uFogColor:   { value: PAL.fog },
+    uFogDensity: { value: 0.0085 },
+    uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
+  },
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  vertexShader: /* glsl */`
+    attribute float aSize;
+    varying vec3  vColor;
+    varying float vDepth;
+    uniform float uPixelRatio;
+    void main() {
+      vColor = color;
+      vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+      vDepth = -mvPos.z;
+      // size attenuation
+      gl_PointSize = aSize * 30.0 * uPixelRatio / max(vDepth, 1.0);
+      gl_Position = projectionMatrix * mvPos;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    varying vec3  vColor;
+    varying float vDepth;
+    uniform vec3  uFogColor;
+    uniform float uFogDensity;
+    void main() {
+      // soft circular falloff
+      vec2 d = gl_PointCoord - vec2(0.5);
+      float r = length(d);
+      float a = smoothstep(0.5, 0.0, r);
+      a = pow(a, 1.6);
+      // fog
+      float fogFactor = 1.0 - exp(-uFogDensity * uFogDensity * vDepth * vDepth);
+      vec3 finalColor = mix(vColor, uFogColor, fogFactor);
+      gl_FragColor = vec4(finalColor * 1.6, a * 0.85);
+    }
+  `,
+});
+
+const emberPoints = new THREE.Points(emberGeo, emberMat);
+emberPoints.frustumCulled = false;
+scene.add(emberPoints);
+
+// =====================================================================
+// 6.  Road planes + GLSL streaking-light shader
+// =====================================================================
+const roadMat = new THREE.ShaderMaterial({
+  uniforms: THREE.UniformsUtils.merge([
+    THREE.UniformsLib.fog,
+    { uTime: { value: 0 } },
+  ]),
+  fog: true,
+  transparent: false,
+  side: THREE.DoubleSide,
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    #include <fog_pars_vertex>
+    void main() {
+      vUv = uv;
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }
+  `,
+  fragmentShader: /* glsl */`
+    precision highp float;
+    uniform float uTime;
+    varying vec2 vUv;
+    #include <fog_pars_fragment>
+
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    // smooth 1D bumps along v: many small light streaks
+    void addStreaks(inout vec3 col, float lane, float t, vec3 tint, float intensity) {
+      // 8 streaks per road length, each with random offset & slightly different speeds
+      for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        float speed = 0.7 + 0.5 * hash21(vec2(fi, 1.3));
+        float off   = hash21(vec2(fi, 3.7));
+        float yPos  = fract(off + t * speed);
+        float dy    = vUv.y - yPos;
+        // wrap distance to nearest
+        dy = dy - floor(dy + 0.5);
+        float dx    = vUv.x - lane;
+        // gauss-ish bumps (elongated along v for streak feel)
+        float bumpY = exp(-dy * dy * 280.0);  // longer in v (streak trail)
+        float bumpX = exp(-dx * dx * 1800.0); // tight in x (lane-focused)
+        col += tint * bumpX * bumpY * intensity;
+      }
+    }
+
+    void main() {
+      // dark asphalt
+      vec3 asphalt = vec3(0.022, 0.022, 0.032);
+      float grain  = hash21(floor(vUv * 600.0)) * 0.04;
+      vec3 col     = asphalt + vec3(grain);
+
+      // dashed center line
+      float centerDist   = abs(vUv.x - 0.5);
+      float centerStripe = smoothstep(0.018, 0.006, centerDist) *
+                           step(0.42, fract(vUv.y * 14.0));
+      col += vec3(0.85, 0.9, 1.0) * centerStripe * 0.55;
+
+      // edge lines
+      float edge = smoothstep(0.013, 0.004, vUv.x) + smoothstep(0.013, 0.004, 1.0 - vUv.x);
+      col += vec3(0.72, 0.85, 1.0) * edge * 0.35;
+
+      // cross-walks every ~12 units of road length
+      float cw = step(0.86, hash21(vec2(floor(vUv.y * 14.0), 0.0)));
+      float cwBand = step(0.32, fract(vUv.x * 5.0)) * step(fract(vUv.x * 5.0), 0.68);
+      col += vec3(0.65, 0.7, 0.8) * cw * cwBand * 0.18;
+
+      // ===== STREAKING LIGHTS =====
+      // Two lanes: incoming (white) at x=0.30, outgoing (red) at x=0.70
+      float t = uTime;
+      addStreaks(col, 0.30, -t, vec3(1.00, 0.96, 0.85), 3.5);  // white headlights
+      addStreaks(col, 0.70, -t, vec3(1.00, 0.22, 0.18), 3.2);  // red taillights
+
+      gl_FragColor = vec4(col, 1.0);
+      #include <fog_fragment>
+    }
+  `,
+});
+
+const roadPlanes = [];
+
+function makeRoad(orientation, centerCoord) {
+  // orientation: 'x' (road runs along X) or 'z' (road runs along Z)
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROAD_LEN, ROAD_WIDTH),
+    roadMat
+  );
+  plane.rotation.x = -Math.PI / 2; // lie flat
+  if (orientation === 'x') {
+    // road runs along world X. We want length along X, width along Z.
+    // Default plane: width=X, height=Y. After rotation.x=-PI/2: Y axis -> -Z, Z axis -> Y.
+    // Easier: rotate around Y by 90° so X becomes Z and vice versa.
+    plane.rotation.z = Math.PI / 2;
+    plane.position.set(0, 0.05, centerCoord);
+  } else {
+    // road runs along world Z. plane width=X, height=Y. After rotation.x=-PI/2,
+    // original Y becomes -Z. So plane length (height of original geometry) maps to -Z direction.
+    plane.position.set(centerCoord, 0.05, 0);
+  }
+  scene.add(plane);
+  roadPlanes.push({ mesh: plane, orientation, center: centerCoord });
+  return plane;
+}
+
+// Z-direction roads (at each block boundary along x)
+for (let bx = -RADIUS; bx <= RADIUS; bx++) {
+  const roadX = (bx + 0.5) * BLOCK;
+  makeRoad('z', roadX);
+}
+// X-direction roads (at each block boundary along z)
+for (let bz = -RADIUS; bz <= RADIUS; bz++) {
+  const roadZ = (bz + 0.5) * BLOCK;
+  makeRoad('x', roadZ);
+}
+
+// =====================================================================
+// 7.  Ambient + moon lighting (mostly for materials that read it;
+//     emissive surfaces are unlit and bypass this)
+// =====================================================================
+scene.add(new THREE.AmbientLight(0x202040, 0.5));
+const moon = new THREE.DirectionalLight(0x6a8aff, 0.35);
+moon.position.set(120, 200, 60);
+scene.add(moon);
+// soft purple fill from "below" to lift the dark side
+const fill = new THREE.DirectionalLight(0x402060, 0.25);
+fill.position.set(-100, -50, -80);
+scene.add(fill);
+
+// =====================================================================
+// 8.  Post-processing: Bloom is the "blurred lights" feel
+// =====================================================================
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth, innerHeight),
+  0.55,   // strength
+  0.4,    // radius
+  0.75    // threshold
+);
+composer.addPass(bloom);
+// Chromatic aberration — RGB channel split at the edges (cyberpunk distortion)
+const chroma = new ShaderPass(ChromaticAberrationShader);
+chroma.uniforms.amount.value = 0.0025;
+composer.addPass(chroma);
+composer.addPass(new OutputPass());
+
+// =====================================================================
+// 9.  Camera controls (PointerLockControls + WASD + auto forward)
+// =====================================================================
+const controls = new PointerLockControls(camera, renderer.domElement);
+const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+const veil     = document.getElementById('start-veil');
+const fpsEl    = document.getElementById('fps');
+const altEl    = document.getElementById('alt');
+const spdEl    = document.getElementById('spd');
+const bcountEl = document.getElementById('bcount');
+const sectorEl = document.getElementById('sector-tag');
+const runEl    = document.getElementById('runtime');
+bcountEl.textContent = BUILDINGS.length;
+
+veil.addEventListener('click', () => {
+  // 1) close the popup immediately, regardless of pointer-lock outcome
+  veil.classList.add('hidden');
+  // 2) request pointer lock for mouse-look (may be denied in some environments)
+  try { controls.lock(); } catch (e) { /* mouse-look is optional */ }
+});
+controls.addEventListener('lock',   () => { /* veil already hidden */ });
+controls.addEventListener('unlock', () => veil.classList.remove('hidden'));
+
+const KEYS = {
+  KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd',
+  Space: 'space', ShiftLeft: 'shift', ShiftRight: 'shift',
+};
+addEventListener('keydown', (e) => {
+  const k = KEYS[e.code];
+  if (k) { keys[k] = true; e.preventDefault(); }
+  // H = toggle controls panel visibility
+  if (e.code === 'KeyH') {
+    document.getElementById('controls').classList.toggle('hidden');
+  }
+});
+addEventListener('keyup',   (e) => {
+  const k = KEYS[e.code];
+  if (k) { keys[k] = false; e.preventDefault(); }
+});
+
+// =====================================================================
+// 10.  Resize
+// =====================================================================
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.setSize(innerWidth, innerHeight);
+  emberMat.uniforms.uPixelRatio.value = Math.min(devicePixelRatio, 2);
+});
+
+// =====================================================================
+// 11.  Animation loop
+// =====================================================================
+const clock = new THREE.Clock();
+let timeAccum = 0;
+let fpsAccum  = 0, fpsFrames = 0, fpsLast = performance.now();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt   = Math.min(clock.getDelta(), 0.066);
+  timeAccum += dt;
+  const t    = timeAccum;
+
+  // shader clocks
+  buildingMat.uniforms.uTime.value = t;
+  roadMat.uniforms.uTime.value     = t;
+  crownMat.uniforms.uTime.value    = t;
+  emberMat.uniforms.uTime.value    = t;
+
+  // auto forward + WASD/space/shift manual
+  const FORWARD = 30;        // u/s
+  const STRAFE  = 22;        // u/s
+  const VERT    = 18;        // u/s
+
+  let fwdManual  = 0, sideManual = 0, upManual = 0;
+  if (keys.w)     fwdManual  += STRAFE;
+  if (keys.s)     fwdManual  -= STRAFE;
+  if (keys.d)     sideManual += STRAFE;
+  if (keys.a)     sideManual -= STRAFE;
+  if (keys.space) upManual   += VERT;
+  if (keys.shift) upManual   -= VERT;
+
+  const fwdTotal = FORWARD + fwdManual;
+
+  // direction vectors
+  const fwdDir = new THREE.Vector3();
+  camera.getWorldDirection(fwdDir);     // points where camera looks
+  const rightDir = new THREE.Vector3().crossVectors(fwdDir, camera.up).normalize();
+
+  // displacement
+  const disp = new THREE.Vector3()
+    .addScaledVector(fwdDir,  fwdTotal * dt)
+    .addScaledVector(rightDir, sideManual * dt);
+  camera.position.add(disp);
+  camera.position.y += upManual * dt;
+  camera.position.y  = THREE.MathUtils.clamp(camera.position.y, 6, 140);
+
+  // gentle bob
+  const bobY = Math.sin(t * 1.4) * 0.6;
+  const bobX = Math.sin(t * 0.7 + 1.3) * 0.4;
+  // Apply as a one-frame visual nudge: we can't permanently offset because it
+  // accumulates. So we DON'T modify position; instead, this is purely cosmetic
+  // — the view already feels alive with the moving lights. Leave it.
+
+  // ===== RECYCLE BUILDINGS =====
+  // Forward is -Z. We move with camera; a building that falls behind the camera
+  // (i.e. has z > camZ + buffer) gets teleported CITY_SPAN units forward.
+  const camZ = camera.position.z;
+  const BUF  = 220;
+  for (let i = 0; i < BUILDINGS.length; i++) {
+    const b = BUILDINGS[i];
+    if (b.z > camZ + BUF) {
+      b.z -= CITY_SPAN;
+      dummy.position.set(b.x, b.h / 2, b.z);
+      dummy.scale.set(b.w, b.h, b.d);
+      dummy.updateMatrix();
+      buildingMesh.setMatrixAt(i, dummy.matrix);
+    }
+  }
+  buildingMesh.instanceMatrix.needsUpdate = true;
+
+  // ===== RECYCLE ROADS =====
+  // Roads extend along their length axis. For Z-oriented roads, recycle along Z.
+  // For X-oriented roads, recycle along X.
+  // Theyre long (ROAD_LEN) so we only recycle when very far behind/ahead.
+  for (const r of roadPlanes) {
+    if (r.orientation === 'z') {
+      // road runs along Z; its center is at (center, ~, 0); recycle along Z
+      if (r.mesh.position.z > camZ + 400) r.mesh.position.z -= CITY_SPAN * 2;
+      if (r.mesh.position.z < camZ - 1600) r.mesh.position.z += CITY_SPAN * 2;
+    } else {
+      // road runs along X; recycle along X
+      const camX = camera.position.x;
+      if (r.mesh.position.x > camX + 400) r.mesh.position.x -= CITY_SPAN * 2;
+      if (r.mesh.position.x < camX - 1600) r.mesh.position.x += CITY_SPAN * 2;
+    }
+  }
+
+  // ===== UPDATE DRONES =====
+  // Drones drift through the air. Recycle when they fall behind the camera.
+  for (let i = 0; i < DRONES.length; i++) {
+    const d = DRONES[i];
+    d.x += d.vx * dt;
+    d.y += Math.sin(t * 0.8 + d.blinkPhase) * d.bobAmp * dt;  // vertical bob
+    d.z += d.vz * dt;
+    if (d.z > camZ + 200) {
+      // recycle ahead of camera with new random properties
+      d.z = camZ - 500 - rng() * 200;
+      d.x = camera.position.x + (rng() - 0.5) * 800;
+      d.y = 15 + rng() * 110;
+      d.vx = (rng() - 0.5) * 6;
+      d.vz = -6 - rng() * 16;
+    }
+    // wrap X to keep within camera vicinity
+    const camX = camera.position.x;
+    if (d.x > camX + 500) d.x -= 1000;
+    if (d.x < camX - 500) d.x += 1000;
+    dummy.position.set(d.x, d.y, d.z);
+    dummy.scale.set(1 + (d.blink ? 0.3 * Math.abs(Math.sin(t * 5 + d.blinkPhase)) : 0), 1, 1);
+    dummy.updateMatrix();
+    droneMesh.setMatrixAt(i, dummy.matrix);
+  }
+  droneMesh.instanceMatrix.needsUpdate = true;
+
+  // ===== UPDATE EMBERS =====
+  // Drift each particle along its own speed; recycle when it passes behind camera.
+  const posAttr = emberGeo.attributes.position;
+  for (let i = 0; i < EMBER_COUNT; i++) {
+    let z = posAttr.array[i * 3 + 2];
+    z += emberDrift[i] * dt;
+    if (z > camZ + 100) {
+      // recycle ahead of camera
+      z = camZ - 600 - rng() * 200;
+      posAttr.array[i * 3 + 0] = camera.position.x + (rng() - 0.5) * 1000;
+      posAttr.array[i * 3 + 1] = rng() * 130;
+    }
+    // gentle horizontal drift
+    posAttr.array[i * 3 + 0] += Math.sin(t * 0.3 + i * 0.7) * 0.5 * dt;
+    posAttr.array[i * 3 + 2] = z;
+  }
+  posAttr.needsUpdate = true;
+
+  // FPS / alt / sector HUD
+  fpsFrames++;
+  if (t - fpsAccum > 0.5) {
+    const fps = fpsFrames / (t - fpsAccum);
+    fpsEl.textContent = `${fps.toFixed(0)}`;
+    fpsAccum = t; fpsFrames = 0;
+  }
+  altEl.textContent = `${camera.position.y.toFixed(0)}`;
+  spdEl.textContent = `${(FORWARD + fwdManual).toFixed(0)}`;
+  sectorEl.textContent = `${(Math.floor((camZ + CITY_SPAN) / CITY_SPAN) % 1000).toString().padStart(3, '0')}`;
+  runEl.textContent    = `${t.toFixed(0)}s`;
+
+  composer.render();
+}
+
+// =====================================================================
+// 12.  Deterministic first frame (compile + one render before RAF)
+// =====================================================================
+renderer.compile(scene, camera);
+composer.render();
+animate();
+
+// expose for QA
+window.__city = {
+  BUILDINGS, CROWNS, DRONES, EMBER_COUNT, SEED,
+  scene, camera, renderer, composer,
+  buildingMat, crownMat, droneMesh, emberPoints,
+};
+</script>
+</body>
+</html>
