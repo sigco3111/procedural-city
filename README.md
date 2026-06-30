@@ -2,7 +2,7 @@
 
 > Three.js 기반 무한 사이버펑크 도시 위 1인칭 비행 — 매번 다른 seed로 다른 도시가 생성됩니다
 
-[`ICBM` 코딩 미션](https://cokac.com/list/announcement/24)으로 만든 인터랙티브 시각화 데모입니다.
+[코딩 미션](https://cokac.com/list/announcement/24)으로 만든 인터랙티브 시각화 데모입니다.
 약 **850개 건물 + 280개 옥상 크라운 + 60개 비행 드론 + 500개 부유 입자**가 InstancedMesh 한 draw call로 묶여 GPU에서 직접 셰이딩되며, **PointerLockControls** 1인칭 시점으로 끝없이 도시를 비행합니다. UnrealBloom + 인라인 크로마틱 어버레이션 후처리로 네온 야경의 디스토션을 살렸습니다.
 
 [🇰🇷 한국어 (기본)](#) · [🇺🇸 English](./README.en.md)
