@@ -1,0 +1,14 @@
+{
+  "name": "procedural-city",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cyberpunk procedural city — 1st-person flight over an infinite neon metropolis (single HTML, Three.js CDN)",
+  "scripts": {
+    "serve": "python3 -m http.server 8765",
+    "qa": "node qa/shot.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
+}
