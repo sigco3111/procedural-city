@@ -11,7 +11,7 @@
 
 ## 🎬 라이브 데모 (Live Demo)
 
-> **👉 [https://procedural-city.vercel.app/](https://procedural-city.vercel.app/)** — 클릭 후 마우스 잠금, 자유 비행 (60fps 권장)
+> **👉 [https://sigco3111.github.io/procedural-city/](https://sigco3111.github.io/procedural-city/)** — 클릭 후 마우스 잠금, 자유 비행 (60fps 권장)
 
 | | |
 |---|---|
@@ -84,7 +84,7 @@ V1 → V2: 도시 밀도 2배, 옥상 크라운(안테나/탱크), 비행 드론
 ## 🚀 실행 방법 (Quick Start)
 
 ### 방법 1: 라이브 데모 (가장 간단)
-위 [Live Demo 링크](https://procedural-city.vercel.app/) 클릭만 하면 됩니다.
+위 [Live Demo 링크](https://sigco3111.github.io/procedural-city/) 클릭만 하면 됩니다.
 
 ### 방법 2: 로컬 서버 (권장)
 ```bash
