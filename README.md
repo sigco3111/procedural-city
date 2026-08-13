@@ -15,7 +15,7 @@
 
 | | |
 |---|---|
-| ![Live](https://img.shields.io/badge/Live-Demo-7C3AED?style=for-the-badge&logo=vercel&logoColor=white) | [![Repo](https://img.shields.io/badge/GitHub-sigco3111%2Fprocedural--city-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sigco3111/procedural-city) |
+| ![Live](https://img.shields.io/badge/Live-Demo-222222?style=for-the-badge&logo=githubpages&logoColor=white) | [![Repo](https://img.shields.io/badge/GitHub-sigco3111%2Fprocedural--city-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sigco3111/procedural-city) |
 | ![Status](https://img.shields.io/badge/Status-Live-22C55E?style=flat-square) | ![Stack](https://img.shields.io/badge/Stack-Three.js_WebGL-000000?style=flat-square&logo=three.js&logoColor=white) |
 | ![License](https://img.shields.io/badge/License-MIT-F1C40F?style=flat-square) | ![Deps](https://img.shields.io/badge/Dependencies-0-9CA3AF?style=flat-square) |
 
@@ -159,7 +159,7 @@ procedural-city/
 │   ├── screenshot-2.png    # +2.5s (드론/카메라 모션 확인)
 │   ├── screenshot-final.png# +5s
 │   └── screenshot-reload.png # 새로고침 (다른 시드 → 다른 도시)
-└── vercel.json             # Vercel 정적 호스팅 설정
+└── gh-pages 브랜치            # main push → 자동 배포 (Vercel → GitHub Pages 전환 2026-08)
 ```
 
 ---
@@ -339,7 +339,7 @@ node qa/shot.mjs
   - 도시 밀도 2배 (RADIUS 4→5, density 3-9 → 4-10)
   - HUD 재디자인: 코너 브래킷, 섹터 ID, 유닛 수, 실행 시간, 속도
 - **V2.1**: 컨트롤 패널 키캡 시각화 + 페이드인 애니메이션
-- **V2.2 (배포)**: Vercel 정적 호스팅 배포 + README 다층 형식 통합
+- **V2.2 (배포)**: 정적 호스팅 배포 + README 다층 형식 통합 (Vercel → GitHub Pages 전환 2026-08)
 
 ---
 
